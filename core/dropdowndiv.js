@@ -183,7 +183,7 @@ Blockly.DropDownDiv.setCategory = function(category) {
  * @return {boolean} True if the menu rendered below block; false if above.
  */
 Blockly.DropDownDiv.showPositionedByBlock = function(owner, block,
-    opt_onHide, opt_secondaryYOffset) {
+    opt_onHide, opt_secondaryYOffset, opt_onTransitionFinished) {
   var scale = block.workspace.scale;
   var bBox = {width: block.width, height: block.height};
   bBox.width *= scale;
@@ -200,7 +200,7 @@ Blockly.DropDownDiv.showPositionedByBlock = function(owner, block,
   }
   // Set bounds to workspace; show the drop-down.
   Blockly.DropDownDiv.setBoundsElement(block.workspace.getParentSvg().parentNode);
-  return Blockly.DropDownDiv.show(this, primaryX, primaryY, secondaryX, secondaryY, opt_onHide);
+  return Blockly.DropDownDiv.show(this, primaryX, primaryY, secondaryX, secondaryY, opt_onHide, opt_onTransitionFinished);
 };
 
 /**
@@ -219,9 +219,14 @@ Blockly.DropDownDiv.showPositionedByBlock = function(owner, block,
  * @param {Function=} opt_onHide Optional callback for when the drop-down is hidden
  * @return {boolean} True if the menu rendered at the primary origin point.
  */
-Blockly.DropDownDiv.show = function(owner, primaryX, primaryY, secondaryX, secondaryY, opt_onHide) {
+
+var onTransitionFinished;
+
+Blockly.DropDownDiv.show = function(owner, primaryX, primaryY, secondaryX, secondaryY, opt_onHide, opt_onTransitionFinished) {
   Blockly.DropDownDiv.owner_ = owner;
   Blockly.DropDownDiv.onHide_ = opt_onHide;
+
+  onTransitionFinished = opt_onTransitionFinished;
   var div = Blockly.DropDownDiv.DIV_;
   var metrics = Blockly.DropDownDiv.getPositionMetrics(primaryX, primaryY, secondaryX, secondaryY);
   // Update arrow CSS
@@ -253,8 +258,20 @@ Blockly.DropDownDiv.show = function(owner, primaryX, primaryY, secondaryX, secon
   var dx = (metrics.finalX - metrics.initialX);
   var dy = (metrics.finalY - metrics.initialY);
   div.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+
+
+  div.addEventListener("webkitTransitionEnd", transitionFinished);
+  div.addEventListener("transitionend ", transitionFinished);
+
   return metrics.arrowAtTop;
 };
+
+function transitionFinished() {
+  var div = Blockly.DropDownDiv.DIV_;
+  div.removeEventListener("webkitTransitionEnd", transitionFinished);
+  div.removeEventListener("transitionend ", transitionFinished);
+  onTransitionFinished();
+}
 
 /**
  * Helper to position the drop-down and the arrow, maintaining bounds.
